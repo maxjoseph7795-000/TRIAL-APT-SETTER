@@ -1,0 +1,15 @@
+{
+  "name": "appointment-booking-app",
+  "version": "1.0.0",
+  "description": "Self-service appointment booking for doctors, dentists and clinics, with a WhatsApp alert to the owner for every booking.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

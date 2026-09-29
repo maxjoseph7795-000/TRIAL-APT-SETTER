@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reservar cita</title>
+<meta name="description" content="Reserve su cita en línea">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: mobile-first single column; header card with clinic identity, then one step at a time, sticky bottom action bar on phones. */
+:root{
+  --bg:#EEF3F4; --surface:#FFFFFF; --sunk:#E4ECEE; --ink:#0E2A33; --muted:#557079; --line:#CFDCDF;
+  --accent:#0F7C77; --accent-ink:#FFFFFF; --accent-soft:#D8EEEC; --bad:#B83A3A; --ok:#1F8A4C;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif; --f-body:"Figtree","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#0B1A1F;--surface:#12262D;--sunk:#0E2026;--ink:#E4EFF1;--muted:#8FA9B0;--line:#24414A;--accent-soft:color-mix(in srgb,var(--accent) 22%,#12262D);--bad:#EC7C7C;--ok:#5CC98A;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px 110px}
+
+.hero{background:var(--ink);color:var(--bg);border-radius:18px;padding:22px 20px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;border:26px solid var(--accent);opacity:.55}
+.hero h1{font-size:26px;position:relative;z-index:1;max-width:80%}
+.hero p{margin:6px 0 0;opacity:.8;position:relative;z-index:1;font-size:14px}
+.hero .prov{display:inline-block;margin-top:12px;font-size:13px;font-weight:600;background:color-mix(in srgb,var(--bg) 14%,transparent);padding:4px 10px;border-radius:999px;position:relative;z-index:1}
+[hidden]{display:none!important}
+.lang{position:absolute;right:14px;top:14px;z-index:2;display:flex;background:color-mix(in srgb,var(--bg) 14%,transparent);border-radius:999px;padding:2px}
+.lang button{border:0;background:transparent;color:inherit;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;cursor:pointer;opacity:.75}
+.lang button[aria-pressed="true"]{background:var(--bg);color:var(--ink);opacity:1}
+
+.progress{display:flex;gap:6px;margin:18px 0 10px}
+.progress i{flex:1;height:4px;border-radius:4px;background:var(--line)}
+.progress i.on{background:var(--accent)}
+.stepname{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h2{font-size:22px;margin:4px 0 14px}
+
+.list{display:grid;gap:10px}
+.opt{display:flex;justify-content:space-between;align-items:center;gap:12px;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;cursor:pointer}
+.opt b{display:block;font-weight:600;font-size:16px}
+.opt .sub{font-size:13px;color:var(--muted)}
+.opt .price{font-weight:600;white-space:nowrap}
+.opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+
+.days{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity}
+.day{flex:none;scroll-snap-align:start;width:64px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:8px 2px;cursor:pointer;text-align:center}
+.day .dw{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.day .dn{font-family:var(--f-display);font-size:22px;font-weight:700;line-height:1.15}
+.day .dm{font-size:11px;color:var(--muted)}
+.day[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.day[aria-pressed="true"] .dw,.day[aria-pressed="true"] .dm{color:var(--accent-ink)}
+.day:disabled{opacity:.4;cursor:not-allowed}
+.label{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.slot{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 0;cursor:pointer;font-family:var(--f-mono);font-size:14px}
+.slot[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:18px;text-align:center;color:var(--muted)}
+
+.summary{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.summary b{font-weight:600}
+.summary button{border:0;background:none;color:var(--accent);font-weight:600;cursor:pointer;padding:4px}
+.form{display:grid;gap:14px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:480px){.two{grid-template-columns:1fr}}
+.field{display:grid;gap:5px;min-width:0}
+.field label{font-size:13px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px}
+.field textarea{min-height:84px;resize:vertical}
+.err{font-size:12px;color:var(--bad)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{margin-top:3px;width:18px;height:18px;flex:none}
+
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.bar-in{max-width:640px;margin:0 auto;display:flex;gap:10px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:13px 18px;font-weight:600;cursor:pointer}
+.btn.primary{flex:1;background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wa{background:#1FA855;border-color:#1FA855;color:#fff;display:inline-flex;gap:8px;align-items:center;justify-content:center;text-decoration:none}
+
+.done{text-align:center;padding-top:10px}
+.tick{width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;margin:0 auto 12px}
+.ref{display:inline-block;font-family:var(--f-mono);font-size:24px;letter-spacing:.12em;border:2px dashed var(--accent);border-radius:12px;padding:8px 16px;margin:12px 0 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;text-align:left;margin-top:16px}
+.card dl{margin:0;display:grid;gap:8px}
+.card dl div{display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--line);padding-bottom:8px}
+.card dl div:last-child{border:0;padding:0}
+.card dt{color:var(--muted);font-size:13px}.card dd{margin:0;font-weight:600;text-align:right}
+.policy{font-size:13px;color:var(--muted);margin-top:14px}
+.foot{margin-top:28px;font-size:13px;color:var(--muted);display:grid;gap:4px}
+.foot a{color:var(--accent);font-weight:600}
+.manage{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+.manage summary{cursor:pointer;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:12px}
+.row .field{flex:1 1 140px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:10;max-width:calc(100% - 32px);text-align:center}
+.loading{color:var(--muted);padding:24px;text-align:center}
+.preview-note{background:#FBEBD2;color:#5A3700;border:1px solid #E9C88F;border-radius:12px;padding:12px 14px;font-size:14px;margin-bottom:14px}
+@media (prefers-reduced-motion:no-preference){.opt,.day,.slot,.btn{transition:background .15s,border-color .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="lang" role="group" aria-label="Language">
+      <button data-lang="es" aria-pressed="true">ES</button><button data-lang="en" aria-pressed="false">EN</button>
+    </div>
+    <h1 id="bizName">…</h1>
+    <p id="tagline"></p>
+    <span class="prov" id="provName" hidden></span>
+  </header>
+  <main id="app"><div class="loading">Cargando…</div></main>
+</div>
+<div class="bar" id="bar" hidden><div class="bar-in" id="barIn"></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const T = {
+  es:{step:"Paso",of:"de",s1:"Servicio",s2:"Fecha y hora",s3:"Sus datos",
+    pickService:"¿Qué tipo de cita necesita?",pickTime:"Elija el día y la hora",details:"Sus datos de contacto",
+    min:"min",open:"libres",closed:"no disp.",morning:"Mañana",afternoon:"Tarde",noSlots:"No hay horarios libres este día. Elija otro día.",
+    change:"Cambiar",next:"Continuar",back:"Atrás",confirm:"Confirmar cita",sending:"Reservando…",
+    name:"Nombre completo",phone:"Teléfono / WhatsApp",email:"Correo electrónico (opcional)",visitType:"Tipo de visita",newP:"Paciente nuevo",retP:"Paciente regular",
+    insurance:"Seguro médico (ARS)",insPh:"Ej. ARS Humano, Senasa o Privado",notes:"Motivo de la visita (opcional)",notesPh:"Describa brevemente lo que necesita.",
+    consent:"Acepto ser contactado sobre esta cita y la política de cancelación de 24 horas.",consentErr:"Debe aceptar para continuar.",
+    booked:"¡Cita reservada!",keepRef:"Guarde este número de referencia.",copy:"Copiar referencia",copied:"Copiado",
+    service:"Servicio",date:"Fecha",time:"Hora",where:"Dirección",notified:"La clínica ya recibió su reserva.",
+    sendWa:"Enviar confirmación por WhatsApp",sendWaNote:"Toque el botón para enviar su reserva a la clínica por WhatsApp.",
+    another:"Reservar otra cita",manage:"¿Ya tiene una cita? Consultar o cancelar",ref:"Referencia",find:"Buscar",cancel:"Cancelar esta cita",cancelSure:"¿Seguro que desea cancelar?",yes:"Sí, cancelar",no:"No",
+    cancelled:"Su cita fue cancelada.",status:{booked:"Reservada",confirmed:"Confirmada",completed:"Completada",no_show:"No asistió",cancelled:"Cancelada"},
+    call:"Llamar",errGeneric:"No se pudo completar. Revise su conexión e intente de nuevo.",loading:"Cargando…",noServices:"Todavía no hay citas disponibles. Vuelva pronto."},
+  en:{step:"Step",of:"of",s1:"Service",s2:"Date & time",s3:"Your details",
+    pickService:"What kind of visit do you need?",pickTime:"Pick a day and time",details:"Your contact details",
+    min:"min",open:"open",closed:"full",morning:"Morning",afternoon:"Afternoon",noSlots:"No open times this day. Pick another day.",
+    change:"Change",next:"Continue",back:"Back",confirm:"Confirm appointment",sending:"Booking…",
+    name:"Full name",phone:"Phone / WhatsApp",email:"Email (optional)",visitType:"Visit type",newP:"New patient",retP:"Returning patient",
+    insurance:"Health insurance",insPh:"e.g. ARS Humano, Senasa, or Self-pay",notes:"Reason for visit (optional)",notesPh:"Briefly describe what you need.",
+    consent:"I agree to be contacted about this appointment and to the 24-hour cancellation policy.",consentErr:"Please accept to continue.",
+    booked:"You're booked!",keepRef:"Keep this reference number.",copy:"Copy reference",copied:"Copied",
+    service:"Service",date:"Date",time:"Time",where:"Address",notified:"The clinic has received your booking.",
+    sendWa:"Send confirmation on WhatsApp",sendWaNote:"Tap the button to send your booking to the clinic on WhatsApp.",
+    another:"Book another appointment",manage:"Already booked? Look up or cancel",ref:"Reference",find:"Find",cancel:"Cancel this appointment",cancelSure:"Cancel for sure?",yes:"Yes, cancel",no:"No",
+    cancelled:"Your appointment was cancelled.",status:{booked:"Booked",confirmed:"Confirmed",completed:"Completed",no_show:"Missed",cancelled:"Cancelled"},
+    call:"Call",errGeneric:"Something went wrong. Check your connection and try again.",loading:"Loading…",noServices:"Online booking isn't open yet. Please check back soon."}
+};
+let L = (()=>{ try{ return localStorage.getItem("lang") || ((navigator.language||"es").startsWith("en")?"en":"es"); }catch(e){ return "es"; } })();
+const t = k => T[L][k];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const fromIso = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const fmt12 = x => { let [h,m]=x.split(":").map(Number); const ap=h>=12?"PM":"AM"; h=h%12||12; return h+":"+pad(m)+" "+ap; };
+const loc = () => L==="es"?"es-DO":"en-US";
+const fmtDate = s => fromIso(s).toLocaleDateString(loc(),{weekday:"long",day:"numeric",month:"long"});
+function toast(m){ const el=$("#toast"); el.textContent=m; el.hidden=false; clearTimeout(toast.h); toast.h=setTimeout(()=>el.hidden=true,2800); }
+/* ---- Preview mode: used only when the page is opened without its server (e.g. double-clicking index.html).
+   Bookings stay in this browser and no WhatsApp alert is sent. ---- */
+let PREVIEW=false;
+const PREVIEW_BASE={businessName:"",tagline:"",providerName:"",address:"",phone:"",brandColor:"#0F7C77",whatsappNumber:"",whatsappReady:false,
+  slotStep:60,leadMinutes:120,horizonDays:30,breakStart:"",breakEnd:"",closedDates:[],
+  hours:{0:null,1:["08:00","16:00"],2:["08:00","16:00"],3:["08:00","16:00"],4:["08:00","16:00"],5:["08:00","16:00"],6:["08:00","16:00"]},
+  services:[], policy:""};
+// Settings saved by the dashboard in preview mode (same browser) override the blank defaults
+function previewCfg(){ let saved={}; try{ saved=JSON.parse(localStorage.getItem("preview.settings")||"{}"); }catch(e){} return {...PREVIEW_BASE, ...saved, whatsappReady:false}; }
+let PREVIEW_CFG=PREVIEW_BASE;
+const pv={
+  load(){ try{ return JSON.parse(localStorage.getItem("preview.appts")||"[]"); }catch(e){ return pv.mem||[]; } },
+  save(a){ pv.mem=a; try{ localStorage.setItem("preview.appts",JSON.stringify(a)); }catch(e){} },
+  iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); },
+  min(x){ const [h,m]=x.split(":").map(Number); return h*60+m; },
+  slots(date,minutes){
+    const c=PREVIEW_CFG, now=new Date(), today=pv.iso(now);
+    const last=new Date(); last.setDate(last.getDate()+c.horizonDays);
+    if(date<today || date>pv.iso(last)) return [];
+    const h=c.hours[fromIso(date).getDay()]; if(!h) return [];
+    const busy=pv.load().filter(a=>a.date===date&&a.status!=="cancelled").map(a=>[pv.min(a.time),pv.min(a.time)+a.minutes]);
+    if(c.breakStart&&c.breakEnd) busy.push([pv.min(c.breakStart),pv.min(c.breakEnd)]);
+    const minStart=date===today? now.getHours()*60+now.getMinutes()+c.leadMinutes : -1, out=[];
+    for(let x=pv.min(h[0]); x+minutes<=pv.min(h[1]); x+=c.slotStep){ if(x<minStart||busy.some(([a,b])=>x<b&&x+minutes>a)) continue; out.push(pad(Math.floor(x/60))+":"+pad(x%60)); }
+    return out;
+  },
+  fail(msg,status){ throw Object.assign(new Error(msg),{status}); },
+  find(b){ const p=String(b.phone||"").replace(/\D/g,""); return pv.load().find(a=>a.ref===String(b.ref||"").trim().toUpperCase() && a.phone.replace(/\D/g,"").slice(-7)===p.slice(-7) && p.length>=7); },
+  handle(url,opts){
+    PREVIEW_CFG=previewCfg();
+    const u=new URL(url,"http://x"), b=opts.body?JSON.parse(opts.body):{}, svc=PREVIEW_CFG.services.find(s=>s.id===(u.searchParams.get("serviceId")||b.serviceId));
+    if(u.pathname==="/api/public/config") return {...PREVIEW_CFG, today:pv.iso(new Date())};
+    if(u.pathname==="/api/public/availability"){ const days=[]; for(let i=0;i<=PREVIEW_CFG.horizonDays;i++){ const d=new Date(); d.setDate(d.getDate()+i); const ds=pv.iso(d); days.push({date:ds,open:pv.slots(ds,60).length}); } return {days}; }
+    if(u.pathname==="/api/public/slots") return {date:u.searchParams.get("date"), slots:pv.slots(u.searchParams.get("date"),60)};
+    if(u.pathname==="/api/public/book"){
+      if(!svc) pv.fail(t("errGeneric"),400);
+      if(!pv.slots(b.date,60).includes(b.time)) pv.fail("That time was just taken. Please choose another time.",409);
+      const ch="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let ref="C-"; for(let i=0;i<5;i++) ref+=ch[Math.floor(Math.random()*ch.length)];
+      const a={ref,serviceId:svc.id,serviceName:svc.name,minutes:60,price:svc.price||"",date:b.date,time:b.time,name:b.name,phone:b.phone,email:b.email||"",notes:b.notes||"",visitType:b.visitType||"",insurance:b.insurance||"",status:"booked",createdAt:new Date().toISOString(),whatsapp:"failed"};
+      const all=pv.load(); all.push(a); pv.save(all); return {ok:true,ref,appointment:a};
+    }
+    if(u.pathname==="/api/public/lookup"){ const a=pv.find(b); if(!a) pv.fail("No appointment matches that reference and phone number.",404); return {appointment:a}; }
+    if(u.pathname==="/api/public/cancel"){ const all=pv.load(); const a=pv.find(b); if(!a) pv.fail("No appointment matches that reference and phone number.",404); const x=all.find(y=>y.ref===a.ref); x.status="cancelled"; pv.save(all); return {appointment:x}; }
+    pv.fail(t("errGeneric"),500);
+  }
+};
+async function api(url, opts={}){
+  if(PREVIEW) return pv.handle(url, opts);
+  const r = await fetch(url, {headers:{"Content-Type":"application/json"}, ...opts});
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(!r.ok) throw Object.assign(new Error(j.error||t("errGeneric")), {data:j, status:r.status});
+  return j;
+}
+
+let CFG=null;
+const S={step:1, serviceId:null, date:null, time:null, days:null, slots:null, f:{name:"",phone:"",email:"",visitType:"",insurance:"",notes:"",consent:false}, errs:{}, done:null, busy:false};
+
+function applyBrand(){
+  const c = CFG.brandColor || "#0F7C77";
+  document.documentElement.style.setProperty("--accent", c);
+  const n = parseInt(c.slice(1),16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const lum = (0.2126*r+0.7152*g+0.0722*b)/255;
+  document.documentElement.style.setProperty("--accent-ink", lum>0.6 ? "#0E2A33" : "#FFFFFF");
+  document.documentElement.style.setProperty("--accent-soft", `color-mix(in srgb, ${c} 14%, var(--surface))`);
+  document.title = (L==="es"?"Reservar cita":"Book an appointment") + (CFG.businessName?" · "+CFG.businessName:"");
+  $("#bizName").textContent = CFG.businessName || (L==="es"?"Reservar cita":"Book an appointment");
+  $("#tagline").textContent = CFG.tagline || "";
+  const pn=$("#provName"); pn.textContent = CFG.providerName||""; pn.hidden = !CFG.providerName;
+  document.documentElement.lang = L;
+  document.querySelectorAll(".lang button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.lang===L));
+}
+
+const svc = () => CFG.services.find(s=>s.id===S.serviceId);
+
+async function loadDays(){
+  S.days=null; S.slots=null; render();
+  const j = await api("/api/public/availability?serviceId="+encodeURIComponent(S.serviceId));
+  S.days=j.days;
+  if(!S.date || !S.days.find(d=>d.date===S.date && d.open)){ const f=S.days.find(d=>d.open); S.date=f?f.date:null; }
+  await loadSlots();
+}
+async function loadSlots(){
+  S.slots=null; render();
+  if(!S.date){ S.slots=[]; render(); return; }
+  const j = await api(`/api/public/slots?serviceId=${encodeURIComponent(S.serviceId)}&date=${S.date}`);
+  S.slots=j.slots; if(!S.slots.includes(S.time)) S.time=null; render();
+}
+
+function progress(){
+  return `<div class="progress">${[1,2,3].map(i=>`<i class="${i<=S.step?"on":""}"></i>`).join("")}</div><div class="stepname">${t("step")} ${S.step} ${t("of")} 3 · ${t("s"+S.step)}</div>`;
+}
+function summaryChip(){
+  const s=svc(); if(!s) return "";
+  const when = S.step>=3 && S.date && S.time ? ` · ${esc(fmtDate(S.date))}, <span class="mono">${fmt12(S.time)}</span>` : "";
+  return `<div class="summary"><span><b>${esc(s.name)}</b> <span class="mono" style="color:var(--muted)">${s.minutes} ${t("min")}</span>${when}</span><button data-go="1">${t("change")}</button></div>`;
+}
+
+function render(){
+  const app=$("#app"); const bar=$("#bar"), barIn=$("#barIn");
+  if(!CFG){ return; }
+  let h="";
+  if(S.done){
+    const a=S.done, s=CFG.services.find(x=>x.id===a.serviceId)||{name:a.serviceName};
+    const waText = encodeURIComponent(`Hola, acabo de reservar una cita:\n${a.serviceName}\n${fmtDate(a.date)} · ${fmt12(a.time)}\nNombre: ${a.name}\nRef: ${a.ref}`);
+    const waNum = (CFG.whatsappNumber||"").replace(/\D/g,"");
+    h=`<div class="done">
+      <div class="tick"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2 style="margin:0">${t("booked")}</h2>
+      <div class="ref" id="refBox">${esc(a.ref)}</div>
+      <div style="color:var(--muted);font-size:14px">${t("keepRef")} <button class="btn" id="copyRef" style="padding:6px 10px;font-size:13px;margin-left:6px">${t("copy")}</button></div>
+      <div class="card"><dl>
+        <div><dt>${t("service")}</dt><dd>${esc(a.serviceName)}</dd></div>
+        <div><dt>${t("date")}</dt><dd>${esc(fmtDate(a.date))}</dd></div>
+        <div><dt>${t("time")}</dt><dd class="mono">${fmt12(a.time)}</dd></div>
+        ${CFG.address?`<div><dt>${t("where")}</dt><dd>${esc(CFG.address)}</dd></div>`:""}
+      </dl></div>
+      ${CFG.whatsappReady
+        ? `<p style="color:var(--ok);font-weight:600;margin-top:16px">${t("notified")}</p>`
+        : (waNum?`<p class="policy">${t("sendWaNote")}</p><a class="btn wa" href="https://wa.me/${waNum}?text=${waText}" target="_blank" rel="noopener">${waIcon()} ${t("sendWa")}</a>`:"")}
+      ${CFG.policy?`<p class="policy">${esc(CFG.policy)}</p>`:""}
+    </div>`;
+    bar.hidden=false; barIn.innerHTML=`<button class="btn primary" id="again">${t("another")}</button>`;
+  } else if(S.step===1){
+    h = progress()+`<h2>${t("pickService")}</h2>`+
+      (CFG.services.length? `<div class="list">${CFG.services.map(s=>`<button class="opt" data-svc="${esc(s.id)}" aria-pressed="${S.serviceId===s.id}"><span><b>${esc(s.name)}</b><span class="sub mono">${s.minutes} ${t("min")}</span></span>${s.price?`<span class="price">${esc(s.price)}</span>`:""}</button>`).join("")}</div>` : `<div class="empty">${t("noServices")}</div>`);
+    bar.hidden=false; barIn.innerHTML=`<button class="btn primary" data-go="2" ${S.serviceId?"":"disabled"}>${t("next")}</button>`;
+  } else if(S.step===2){
+    h = progress()+`<h2>${t("pickTime")}</h2>`+summaryChip();
+    if(!S.days){ h+=`<div class="loading">${t("loading")}</div>`; }
+    else{
+      h+=`<div class="days" role="group">${S.days.map(d=>{ const dt=fromIso(d.date); return `<button class="day" data-date="${d.date}" aria-pressed="${S.date===d.date}" ${d.open?"":"disabled"}><div class="dw">${dt.toLocaleDateString(loc(),{weekday:"short"}).replace(".","")}</div><div class="dn">${dt.getDate()}</div><div class="dm">${d.open?dt.toLocaleDateString(loc(),{month:"short"}).replace(".",""):t("closed")}</div></button>`; }).join("")}</div>`;
+      if(S.date) h+=`<div class="label" style="text-transform:none;letter-spacing:0;font-size:15px;color:var(--ink)">${esc(fmtDate(S.date))}</div>`;
+      if(S.slots===null) h+=`<div class="loading">${t("loading")}</div>`;
+      else if(!S.slots.length) h+=`<div class="empty">${t("noSlots")}</div>`;
+      else{
+        const am=S.slots.filter(x=>x<"12:00"), pm=S.slots.filter(x=>x>="12:00");
+        const b=arr=>`<div class="slots">${arr.map(x=>`<button class="slot" data-time="${x}" aria-pressed="${S.time===x}">${fmt12(x)}</button>`).join("")}</div>`;
+        if(am.length) h+=`<div class="label">${t("morning")}</div>`+b(am);
+        if(pm.length) h+=`<div class="label">${t("afternoon")}</div>`+b(pm);
+      }
+    }
+    bar.hidden=false; barIn.innerHTML=`<button class="btn" data-go="1">${t("back")}</button><button class="btn primary" data-go="3" ${S.time?"":"disabled"}>${t("next")}</button>`;
+  } else if(S.step===3){
+    const f=S.f, E=S.errs;
+    h = progress()+`<h2>${t("details")}</h2>`+summaryChip()+`
+    <form class="form" id="form" novalidate>
+      <div class="field"><label for="f-name">${t("name")} *</label><input id="f-name" autocomplete="name" value="${esc(f.name)}">${E.name?`<span class="err">${esc(E.name)}</span>`:""}</div>
+      <div class="two">
+        <div class="field"><label for="f-phone">${t("phone")} *</label><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="809-555-0123" value="${esc(f.phone)}">${E.phone?`<span class="err">${esc(E.phone)}</span>`:""}</div>
+        <div class="field"><label for="f-email">${t("email")}</label><input id="f-email" type="email" autocomplete="email" value="${esc(f.email)}">${E.email?`<span class="err">${esc(E.email)}</span>`:""}</div>
+      </div>
+      <div class="two">
+        <div class="field"><label for="f-type">${t("visitType")}</label><select id="f-type"><option value="${t("newP")}">${t("newP")}</option><option value="${t("retP")}" ${f.visitType===t("retP")?"selected":""}>${t("retP")}</option></select></div>
+        <div class="field"><label for="f-ins">${t("insurance")}</label><input id="f-ins" placeholder="${t("insPh")}" value="${esc(f.insurance)}"></div>
+      </div>
+      <div class="field"><label for="f-notes">${t("notes")}</label><textarea id="f-notes" placeholder="${t("notesPh")}">${esc(f.notes)}</textarea></div>
+      <div class="hp" aria-hidden="true"><label for="f-web">Website</label><input id="f-web" tabindex="-1" autocomplete="off"></div>
+      <label class="check"><input type="checkbox" id="f-consent" ${f.consent?"checked":""}><span>${t("consent")}</span></label>
+      ${E.consent?`<span class="err">${esc(E.consent)}</span>`:""}
+    </form>`;
+    bar.hidden=false; barIn.innerHTML=`<button class="btn" data-go="2">${t("back")}</button><button class="btn primary" id="confirm" ${S.busy?"disabled":""}>${S.busy?t("sending"):t("confirm")}</button>`;
+  }
+  if(!S.done) h+=manageBox();
+  h+=footer();
+  app.innerHTML=h;
+}
+function waIcon(){ return `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-1.4-.6-2.4-1.5-3.1-2.8-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.8.8-1 1.9-.6 3 .8 2.2 2.6 4 4.9 4.9 1.3.5 2.4.5 3.3-.3.4-.4.7-.9.8-1.4 0-.2 0-.3-.1-.4z"/></svg>`; }
+function manageBox(){
+  return `<details class="manage" id="manage"><summary>${t("manage")}</summary>
+    <div class="row"><div class="field"><label for="m-ref">${t("ref")}</label><input id="m-ref" placeholder="C-XXXXX" autocapitalize="characters"></div>
+    <div class="field"><label for="m-phone">${t("phone")}</label><input id="m-phone" type="tel" inputmode="tel"></div>
+    <button class="btn" id="m-find">${t("find")}</button></div><div id="m-out"></div></details>`;
+}
+function footer(){
+  const tel=(CFG.phone||"").replace(/[^\d+]/g,"");
+  return `<div class="foot">${CFG.address?`<span>${esc(CFG.address)}</span>`:""}${CFG.phone?`<span>${esc(CFG.phone)} ${tel?`· <a href="tel:${esc(tel)}">${t("call")}</a>`:""}</span>`:""}</div>`;
+}
+
+function readForm(){
+  const f=S.f; if(!$("#f-name")) return;
+  f.name=$("#f-name").value.trim(); f.phone=$("#f-phone").value.trim(); f.email=$("#f-email").value.trim();
+  f.visitType=$("#f-type").value; f.insurance=$("#f-ins").value.trim(); f.notes=$("#f-notes").value.trim(); f.consent=$("#f-consent").checked; f.website=$("#f-web").value;
+}
+async function submit(){
+  readForm(); const f=S.f; const E={};
+  if(f.name.length<3) E.name = L==="es"?"Escriba su nombre y apellido.":"Enter your first and last name.";
+  if(f.phone.replace(/\D/g,"").length<10) E.phone = L==="es"?"Escriba un número de 10 dígitos con código de área.":"Enter a 10-digit number including area code.";
+  if(f.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) E.email = L==="es"?"Revise el correo.":"Check the email address.";
+  if(!f.consent) E.consent=t("consentErr");
+  S.errs=E; if(Object.keys(E).length){ render(); return; }
+  S.busy=true; render();
+  try{
+    const j = await api("/api/public/book",{method:"POST",body:JSON.stringify({serviceId:S.serviceId,date:S.date,time:S.time,name:f.name,phone:f.phone,email:f.email,visitType:f.visitType,insurance:f.insurance,notes:f.notes,website:f.website,lang:L})});
+    S.done={...j.appointment, serviceId:S.serviceId}; S.busy=false; window.scrollTo({top:0}); render();
+  }catch(e){
+    S.busy=false;
+    if(e.status===409){ toast(L==="es"?"Ese horario acaba de ocuparse. Elija otro.":e.message); S.step=2; S.time=null; loadSlots(); return; }
+    toast(e.message); render();
+  }
+}
+
+document.addEventListener("click", async e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.lang){ readForm(); L=b.dataset.lang; try{localStorage.setItem("lang",L);}catch(_){} applyBrand(); render(); return; }
+  if(b.dataset.svc){ if(S.serviceId!==b.dataset.svc){ S.serviceId=b.dataset.svc; S.time=null; S.days=null; } render(); return; }
+  if(b.dataset.go){ readForm(); const g=+b.dataset.go; S.step=g; window.scrollTo({top:0}); if(g===2 && !S.days){ loadDays().catch(err=>toast(err.message)); } else render(); return; }
+  if(b.dataset.date){ S.date=b.dataset.date; S.time=null; loadSlots().catch(err=>toast(err.message)); return; }
+  if(b.dataset.time){ S.time=b.dataset.time; render(); return; }
+  if(b.id==="confirm"){ submit(); return; }
+  if(b.id==="again"){ Object.assign(S,{step:1,serviceId:null,date:null,time:null,days:null,slots:null,done:null,errs:{}}); S.f.notes=""; S.f.consent=false; render(); return; }
+  if(b.id==="copyRef"){ try{ await navigator.clipboard.writeText(S.done.ref); toast(t("copied")); }catch(_){ const r=document.createRange(); r.selectNodeContents($("#refBox")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); } return; }
+  if(b.id==="m-find"){ lookup(); return; }
+  if(b.id==="m-cancel"){ b.hidden=true; $("#m-sure").hidden=false; return; }
+  if(b.id==="m-no"){ lookup(); return; }
+  if(b.id==="m-yes"){
+    try{ await api("/api/public/cancel",{method:"POST",body:JSON.stringify({ref:$("#m-ref").value,phone:$("#m-phone").value})}); toast(t("cancelled")); lookup(); S.days=null; }
+    catch(err){ toast(err.message); } return;
+  }
+});
+async function lookup(){
+  const out=$("#m-out");
+  try{
+    const {appointment:a} = await api("/api/public/lookup",{method:"POST",body:JSON.stringify({ref:$("#m-ref").value,phone:$("#m-phone").value})});
+    const can = a.status==="booked"||a.status==="confirmed";
+    out.innerHTML=`<div class="card"><dl>
+      <div><dt>${t("service")}</dt><dd>${esc(a.serviceName)}</dd></div>
+      <div><dt>${t("date")}</dt><dd>${esc(fmtDate(a.date))} · <span class="mono">${fmt12(a.time)}</span></dd></div>
+      <div><dt>Status</dt><dd>${esc(T[L].status[a.status]||a.status)}</dd></div></dl>
+      ${can?`<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn" id="m-cancel" style="color:var(--bad)">${t("cancel")}</button>
+      <span id="m-sure" hidden>${t("cancelSure")} <button class="btn" id="m-yes" style="color:var(--bad);padding:8px 12px">${t("yes")}</button> <button class="btn" id="m-no" style="padding:8px 12px">${t("no")}</button></span></div>`:""}
+    </div>`;
+  }catch(e){ out.innerHTML=`<p class="err" style="margin-top:10px">${esc(L==="es"&&e.status===404?"No encontramos una cita con esa referencia y teléfono.":e.message)}</p>`; }
+}
+
+(async function init(){
+  try{
+    if(location.protocol==="file:") throw new Error("no server");
+    CFG = await api("/api/public/config");
+    if(!CFG || !Array.isArray(CFG.services)) throw new Error("no server");
+  }catch(e){
+    PREVIEW = true; CFG = await api("/api/public/config");
+    const note=document.createElement("div"); note.className="preview-note";
+    note.innerHTML=`<b>Preview mode.</b> This page isn't connected to its server, so bookings are only saved in this browser and no WhatsApp alert is sent. Once the app is running on Railway, open its link instead and this note disappears.`;
+    document.querySelector(".wrap").prepend(note);
+  }
+  applyBrand(); render();
+})();
+</script>
+</body>
+</html>

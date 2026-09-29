@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Owner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+/* Layout: top bar + tabs; appointments grouped by day as a scannable agenda; settings as stacked sections. */
+:root{
+  --bg:#EEF3F4; --surface:#FFFFFF; --sunk:#E4ECEE; --ink:#0E2A33; --muted:#557079; --line:#CFDCDF;
+  --accent:#0F7C77; --accent-ink:#FFFFFF; --accent-soft:#D8EEEC;
+  --ok:#1F8A4C; --ok-soft:#DDF1E4; --warn:#B26A00; --warn-soft:#FBEBD2; --bad:#B83A3A; --bad-soft:#F8DEDE; --info:#2F5FA8; --info-soft:#DDE7F7;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif; --f-body:"Figtree","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#0B1A1F;--surface:#12262D;--sunk:#0E2026;--ink:#E4EFF1;--muted:#8FA9B0;--line:#24414A;--accent:#3FB8B0;--accent-ink:#06201F;--accent-soft:#143B3A;--ok:#5CC98A;--ok-soft:#153526;--warn:#E6A74A;--warn-soft:#3A2B12;--bad:#EC7C7C;--bad-soft:#3E1C1F;--info:#86AEEB;--info-soft:#1A2B45;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body)}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);margin:0;letter-spacing:-.01em}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.top-in{max-width:980px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:12px;min-height:58px;flex-wrap:wrap}
+.top h1{font-size:18px}
+.top small{color:var(--muted);font-size:12px;display:block;font-family:var(--f-body);font-weight:500}
+.tabs{display:flex;gap:4px;margin-left:auto;background:var(--sunk);padding:3px;border-radius:999px}
+.tabs button{border:0;background:none;padding:6px 14px;border-radius:999px;font-weight:600;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0/.12)}
+main{max-width:980px;margin:0 auto;padding:20px 16px 60px}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.sm{padding:5px 9px;font-size:13px}
+.btn.danger{color:var(--bad)}
+.btn.wa{color:#1FA855}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.link{border:0;background:none;color:var(--muted);cursor:pointer;font-weight:600}
+
+.login{max-width:360px;margin:12vh auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px;display:grid;gap:14px}
+.field{display:grid;gap:5px;min-width:0}
+.field label{font-size:13px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px}
+.field textarea{min-height:70px;resize:vertical}
+.hint{font-size:13px;color:var(--muted)}
+.err{color:var(--bad);font-size:13px}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+@media (max-width:640px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat .k{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--f-display);font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.seg{display:flex;background:var(--sunk);border-radius:8px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:6px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink)}
+.toolbar input{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 10px;flex:1 1 180px;min-width:0}
+.spacer{flex:1}
+
+.dayhead{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 8px}
+.dayhead h3{font-size:17px}
+.dayhead span{font-size:13px;color:var(--muted)}
+.appt{display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:8px}
+.appt.dim{opacity:.6}
+.appt .time{font-family:var(--f-mono);font-size:15px}
+.appt .time small{display:block;color:var(--muted);font-size:12px}
+.appt b{font-weight:600;font-size:16px}
+.appt .sub{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.appt .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-content:flex-start;max-width:280px}
+@media (max-width:640px){.appt{grid-template-columns:64px minmax(0,1fr)}.appt .acts{grid-column:1/-1;justify-content:flex-start;max-width:none}}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;vertical-align:middle}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st-booked{background:var(--info-soft);color:var(--info)}
+.st-confirmed{background:var(--accent-soft);color:var(--accent)}
+.st-completed{background:var(--ok-soft);color:var(--ok)}
+.st-no_show,.st-cancelled{background:var(--bad-soft);color:var(--bad)}
+.wa-flag{font-size:12px;font-weight:600;margin-left:6px}
+.wa-flag.ok{color:var(--ok)}.wa-flag.no{color:var(--warn)}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:24px;text-align:center;color:var(--muted);background:var(--surface)}
+
+.section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px}
+.section h2{font-size:18px;margin-bottom:4px}
+.section > .hint{margin:0 0 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:600px){.grid2{grid-template-columns:1fr}}
+.hours{display:grid;gap:8px}
+.hrow{display:grid;grid-template-columns:120px auto 1fr;gap:10px;align-items:center}
+.hrow .times{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.hrow select{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px}
+@media (max-width:520px){.hrow{grid-template-columns:1fr auto}.hrow .times{grid-column:1/-1}}
+.svcrow{display:grid;grid-template-columns:minmax(0,1fr) 140px auto;gap:8px;align-items:end;margin-bottom:8px}
+@media (max-width:560px){.svcrow{grid-template-columns:1fr 1fr}.svcrow .field:first-child{grid-column:1/-1}}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.chip{display:inline-flex;gap:6px;align-items:center;background:var(--sunk);border-radius:999px;padding:4px 6px 4px 12px;font-size:13px}
+.chip button{border:0;background:none;cursor:pointer;color:var(--muted);font-weight:700}
+.savebar{position:sticky;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:flex;justify-content:flex-end;gap:10px;margin:0 -16px}
+ol.steps{margin:8px 0 14px;padding-left:20px;display:grid;gap:4px;font-size:14px}
+code{font-family:var(--f-mono);font-size:13px;background:var(--sunk);padding:1px 5px;border-radius:4px}
+.share-link{display:flex;gap:8px;flex-wrap:wrap}
+.share-link input{flex:1 1 240px;font-family:var(--f-mono);font-size:14px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 12px;min-width:0}
+#qr{background:#fff;padding:14px;border-radius:12px;display:inline-block;margin-top:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:20;max-width:calc(100% - 32px)}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:20px;width:min(460px,calc(100% - 32px))}
+dialog::backdrop{background:rgb(0 0 0/.4)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div class="toast" id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const fromIso=s=>{const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);};
+const fmt12=x=>{let[h,m]=x.split(":").map(Number);const ap=h>=12?"PM":"AM";h=h%12||12;return h+":"+pad(m)+" "+ap;};
+const fmtDay=s=>fromIso(s).toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+const fmtDayEs=s=>fromIso(s).toLocaleDateString("es-DO",{weekday:"long",day:"numeric",month:"long"});
+function hourOpts(from,to,sel){ let o=""; for(let h=+from.slice(0,2);h<=+to.slice(0,2);h++){ const v=pad(h)+":00"; o+=`<option value="${v}" ${v===sel?"selected":""}>${fmt12(v)}</option>`; } return o; }
+const plusHour=v=>pad(+v.slice(0,2)+1)+":00";
+const minusHour=v=>pad(Math.max(0,+v.slice(0,2)-1))+":00";
+const DAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const STATUS={booked:"New",confirmed:"Confirmed",completed:"Completed",no_show:"No-show",cancelled:"Cancelled"};
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,3000);}
+/* ---- Preview mode: used when this page is opened without its server (e.g. double-clicking admin.html).
+   Works with the preview bookings made on index.html in the same browser. No password, no WhatsApp. ---- */
+let PREVIEW=false;
+const PV_BASE={businessName:"",tagline:"",providerName:"",address:"",phone:"",brandColor:"#0F7C77",timezone:"America/Santo_Domingo",whatsappNumber:"",callmebotKey:"",
+  slotStep:60,leadMinutes:120,horizonDays:30,breakStart:"",breakEnd:"",closedDates:[],services:[],policy:"",
+  hours:{0:null,1:["08:00","16:00"],2:["08:00","16:00"],3:["08:00","16:00"],4:["08:00","16:00"],5:["08:00","16:00"],6:["08:00","16:00"]}};
+const pvs={
+  get(k,def){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):def; }catch(e){ return (pvs.mem||{})[k]??def; } },
+  set(k,v){ pvs.mem=pvs.mem||{}; pvs.mem[k]=v; try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} },
+  today(){ const d=new Date(); return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); },
+  ref(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let r="C-"; for(let i=0;i<5;i++) r+=c[Math.floor(Math.random()*c.length)]; return r; },
+  handle(url,opts){
+    const b=opts.body?JSON.parse(opts.body):{}, m=(opts.method||"GET").toUpperCase(), path=url.split("?")[0];
+    const appts=pvs.get("preview.appts",[]), settings={...PV_BASE,...pvs.get("preview.settings",{})};
+    if(path==="/api/admin/me") return {signedIn:true};
+    if(path==="/api/admin/login"||path==="/api/admin/logout") return {ok:true};
+    if(path==="/api/admin/settings"){ if(m==="PUT"){ const ns={...settings,...b}; ns.services=(ns.services||[]).filter(x=>x.name&&x.name.trim()).map((x,i)=>({...x,id:x.id||("s"+Date.now()+i),minutes:60})); pvs.set("preview.settings",ns); return ns; } return settings; }
+    if(path==="/api/admin/test-whatsapp") throw new Error("WhatsApp messages can only be sent when the app is running online (on Railway).");
+    if(path==="/api/admin/appointments"){
+      if(m==="POST"){
+        const svc=settings.services.find(x=>x.id===b.serviceId); if(!svc||!b.date||!b.time||!b.name) throw new Error("Service, date, time and name are required.");
+        const clash=appts.find(x=>x.date===b.date&&x.time===b.time&&x.status!=="cancelled"); if(clash) throw new Error(`That hour is already taken by ${clash.name}.`);
+        const a={ref:pvs.ref(),serviceId:svc.id,serviceName:svc.name,minutes:60,price:svc.price||"",date:b.date,time:b.time,name:b.name,phone:b.phone||"",email:"",notes:b.notes||"",status:"confirmed",source:"admin",createdAt:new Date().toISOString()};
+        appts.push(a); pvs.set("preview.appts",appts); return {appointment:a};
+      }
+      return {today:pvs.today(), appointments:[...appts].sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time))};
+    }
+    const mm=path.match(/^\/api\/admin\/appointments\/(.+)$/);
+    if(mm){ const i=appts.findIndex(x=>x.ref===mm[1]); if(i<0) throw new Error("Appointment not found.");
+      if(m==="DELETE") appts.splice(i,1); else Object.assign(appts[i],b.status?{status:b.status}:{});
+      pvs.set("preview.appts",appts); return {ok:true, appointment:appts[i]}; }
+    throw new Error("Not available in preview mode.");
+  }
+};
+async function api(url,opts={}){
+  if(PREVIEW) return pvs.handle(url,opts);
+  const r=await fetch(url,{headers:{"Content-Type":"application/json"},...opts}); let j={}; try{j=await r.json();}catch(e){}
+  if(r.status===401 && !url.endsWith("/login")){ showLogin(); throw new Error("Please sign in."); }
+  if(!r.ok) throw new Error(j.error||"Something went wrong. Try again."); return j;
+}
+
+let tab="appts", A=[], TODAY="", SET=null, filter="upcoming", q="", confirmDel=null;
+
+function showLogin(msg){
+  $("#root").innerHTML=`<form class="login" id="loginForm"><h1 style="font-size:22px">Owner dashboard</h1><p class="hint" style="margin:0">Sign in to see your appointments.</p>
+    <div class="field"><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" autofocus></div>
+    ${msg?`<span class="err">${esc(msg)}</span>`:""}<button class="btn primary" style="justify-content:center">Sign in</button>
+    <a class="hint" href="${location.protocol==="file:"?"index.html":"/"}">Open the booking page</a></form>`;
+  $("#loginForm").onsubmit=async e=>{e.preventDefault(); try{await api("/api/admin/login",{method:"POST",body:JSON.stringify({password:$("#pw").value})}); boot();}catch(err){showLogin(err.message);}};
+}
+function shell(){
+  $("#root").innerHTML=`<header class="top"><div class="top-in">
+    <div><h1 id="bn">${esc(SET.businessName||"Your business")}</h1><small>Owner dashboard</small></div>
+    <nav class="tabs" role="tablist">${[["appts","Appointments"],["settings","Settings"],["share","Share link"]].map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${tab===k}">${l}</button>`).join("")}</nav>
+    ${PREVIEW?"":`<button class="link" id="logout">Sign out</button>`}</div></header>
+    ${PREVIEW?`<div style="max-width:980px;margin:16px auto 0;padding:0 16px"><div style="background:#FBEBD2;color:#5A3700;border:1px solid #E9C88F;border-radius:12px;padding:12px 14px;font-size:14px"><b>Preview mode.</b> This dashboard isn't connected to its server. You can try everything here, and it shows the test bookings made on the booking page in this same browser. Nothing is online yet: clients can't book and no WhatsApp messages are sent until the app is running on Railway.</div></div>`:""}
+    <main id="main"></main>`;
+}
+async function boot(){
+  let me;
+  if(location.protocol==="file:") PREVIEW=true;
+  else { try{ me=await api("/api/admin/me"); }catch(e){ if(e instanceof TypeError || e.message==="Failed to fetch") PREVIEW=true; else throw e; } }
+  if(PREVIEW) me={signedIn:true};
+  if(!me.signedIn) return showLogin();
+  SET=await api("/api/admin/settings"); shell(); await loadAppts(); renderTab();
+  setInterval(()=>{ if(tab==="appts" && !document.hidden) loadAppts().then(renderTab).catch(()=>{}); }, 60000);
+}
+async function loadAppts(){ const j=await api("/api/admin/appointments"); A=j.appointments; TODAY=j.today; }
+
+function renderTab(){
+  document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+  if(tab==="appts") renderAppts(); else if(tab==="settings") renderSettings(); else renderShare();
+}
+
+/* ---------- Appointments ---------- */
+function renderAppts(){
+  const todayList=A.filter(a=>a.date===TODAY && a.status!=="cancelled");
+  const upcoming=A.filter(a=>a.date>=TODAY && (a.status==="booked"||a.status==="confirmed"));
+  const newOnes=A.filter(a=>a.status==="booked" && a.date>=TODAY);
+  const week=A.filter(a=>a.date>=TODAY && a.date<=addDays(TODAY,6) && a.status!=="cancelled");
+  let list=A.filter(a=> filter==="upcoming"? a.date>=TODAY : filter==="today"? a.date===TODAY : filter==="past"? a.date<TODAY : true);
+  if(q){ const s=q.toLowerCase(); list=list.filter(a=>(a.name+" "+a.phone+" "+a.ref+" "+a.serviceName).toLowerCase().includes(s)); }
+  if(filter==="past") list=[...list].reverse();
+  const groups={}; list.forEach(a=>(groups[a.date]=groups[a.date]||[]).push(a));
+  const body=Object.keys(groups).length? Object.entries(groups).map(([d,arr])=>`<div class="dayhead"><h3>${d===TODAY?"Today · ":""}${esc(fmtDay(d))}</h3><span>${arr.filter(a=>a.status!=="cancelled").length} appointment${arr.length===1?"":"s"}</span></div>${arr.map(card).join("")}`).join("")
+    : `<div class="empty">${filter==="upcoming"?"No upcoming appointments yet. Share your booking link so clients can book.":"Nothing here."}</div>`;
+  $("#main").innerHTML=`
+    ${setupNeeded()}
+    <div class="stats">
+      <div class="stat"><div class="k">Today</div><div class="v">${todayList.length}</div></div>
+      <div class="stat"><div class="k">Next 7 days</div><div class="v">${week.length}</div></div>
+      <div class="stat"><div class="k">New, to confirm</div><div class="v">${newOnes.length}</div></div>
+      <div class="stat"><div class="k">Upcoming</div><div class="v">${upcoming.length}</div></div>
+    </div>
+    <div class="toolbar">
+      <div class="seg">${[["upcoming","Upcoming"],["today","Today"],["past","Past"],["all","All"]].map(([k,l])=>`<button data-filter="${k}" aria-pressed="${filter===k}">${l}</button>`).join("")}</div>
+      <input id="q" type="search" placeholder="Search name, phone or reference" value="${esc(q)}">
+      <button class="btn primary" id="addBtn">+ Add appointment</button>
+      ${PREVIEW?"":`<a class="btn" href="/api/admin/export.csv">Export CSV</a>`}
+    </div>${body}`;
+}
+function addDays(d,n){const x=fromIso(d);x.setDate(x.getDate()+n);return x.getFullYear()+"-"+pad(x.getMonth()+1)+"-"+pad(x.getDate());}
+function waLinkClient(a){
+  const num=(a.phone||"").replace(/\D/g,""); if(num.length<10) return "";
+  const full=num.length===10?"1"+num:num; // DR / US numbers without country code
+  const msg=`Hola ${a.name.split(" ")[0]}, le confirmamos su cita en ${SET.businessName}:\n${a.serviceName}\n${fmtDayEs(a.date)} a las ${fmt12(a.time)}\n${SET.address?SET.address+"\n":""}Ref: ${a.ref}\n\nResponda a este mensaje si necesita cambiarla.`;
+  return `https://wa.me/${full}?text=${encodeURIComponent(msg)}`;
+}
+function card(a){
+  const acts=[];
+  if(a.status==="booked") acts.push(`<button class="btn sm primary" data-st="confirmed" data-ref="${a.ref}">Confirm</button>`);
+  if(a.status==="booked"||a.status==="confirmed") acts.push(`<button class="btn sm" data-st="completed" data-ref="${a.ref}">Done</button>`,`<button class="btn sm" data-st="no_show" data-ref="${a.ref}">No-show</button>`,`<button class="btn sm danger" data-st="cancelled" data-ref="${a.ref}">Cancel</button>`);
+  else acts.push(`<button class="btn sm" data-st="confirmed" data-ref="${a.ref}">Reopen</button>`);
+  const wa=waLinkClient(a); if(wa) acts.push(`<a class="btn sm wa" href="${wa}" target="_blank" rel="noopener">WhatsApp client</a>`);
+  acts.push(confirmDel===a.ref?`<span class="hint">Delete for good? <button class="btn sm danger" data-del="${a.ref}">Delete</button> <button class="btn sm" data-keep="1">Keep</button></span>`:`<button class="btn sm" data-askdel="${a.ref}" title="Delete">Delete</button>`);
+  const waFlag = a.source==="admin"?"" : a.whatsapp==="sent"?`<span class="wa-flag ok">WhatsApp alert sent</span>`:a.whatsapp==="failed"?`<span class="wa-flag no">WhatsApp alert not sent</span>`:"";
+  return `<div class="appt ${a.status==="cancelled"||a.status==="no_show"?"dim":""}">
+    <div class="time">${fmt12(a.time)}<small>${a.minutes} min</small></div>
+    <div><b>${esc(a.name)}</b> <span class="pill st-${a.status}">${STATUS[a.status]||a.status}</span>${waFlag}
+      <div class="sub">${esc(a.serviceName)}${a.price?" · "+esc(a.price):""}${a.visitType?" · "+esc(a.visitType):""}${a.insurance?" · "+esc(a.insurance):""}</div>
+      <div class="sub mono">${esc(a.phone||"—")}${a.email?" · "+esc(a.email):""} · ${esc(a.ref)}</div>
+      ${a.notes?`<div class="sub">“${esc(a.notes)}”</div>`:""}
+      ${a.source==="admin"?`<div class="sub">Added by you</div>`:""}
+    </div>
+    <div class="acts">${acts.join("")}</div></div>`;
+}
+function addDialog(){
+  const d=document.createElement("dialog");
+  d.innerHTML=`<form method="dialog" id="addForm" style="display:grid;gap:12px"><h2 style="font-size:19px">Add an appointment</h2><p class="hint" style="margin:0">For bookings made by phone or in person. The time is blocked on the booking page.</p>
+    <div class="field"><label for="a-name">Client name</label><input id="a-name" required></div>
+    <div class="field"><label for="a-phone">Phone</label><input id="a-phone" type="tel"></div>
+    <div class="field"><label for="a-svc">Service</label><select id="a-svc">${SET.services.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("")}</select></div>
+    <div class="grid2"><div class="field"><label for="a-date">Date</label><input id="a-date" type="date" value="${TODAY}" required></div><div class="field"><label for="a-time">Time</label><select id="a-time">${hourOpts("06:00","21:00","09:00")}</select></div></div>
+    <div class="field"><label for="a-notes">Notes</label><input id="a-notes"></div>
+    <span class="err" id="a-err"></span>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" value="cancel" formnovalidate>Close</button><button class="btn primary" id="a-save" value="save">Add</button></div></form>`;
+  document.body.appendChild(d); d.showModal();
+  d.querySelector("#a-save").onclick=async e=>{
+    e.preventDefault();
+    try{ await api("/api/admin/appointments",{method:"POST",body:JSON.stringify({name:$("#a-name").value,phone:$("#a-phone").value,serviceId:$("#a-svc").value,date:$("#a-date").value,time:$("#a-time").value,notes:$("#a-notes").value})});
+      d.close(); d.remove(); await loadAppts(); renderAppts(); toast("Appointment added"); }
+    catch(err){ $("#a-err").textContent=err.message; }
+  };
+  d.addEventListener("close",()=>d.remove());
+}
+
+/* ---------- Settings ---------- */
+function renderSettings(){
+  const s=SET;
+  $("#main").innerHTML=`<form id="setForm" novalidate>
+  <div class="section"><h2>Business</h2><p class="hint">Shown to clients at the top of the booking page.</p>
+    <div class="grid2">
+      <div class="field"><label for="s-name">Business name</label><input id="s-name" value="${esc(s.businessName)}"></div>
+      <div class="field"><label for="s-prov">Doctor / provider name</label><input id="s-prov" value="${esc(s.providerName)}"></div>
+      <div class="field" style="grid-column:1/-1"><label for="s-tag">Short welcome line</label><input id="s-tag" value="${esc(s.tagline)}"></div>
+      <div class="field"><label for="s-addr">Address</label><input id="s-addr" value="${esc(s.address)}"></div>
+      <div class="field"><label for="s-phone">Phone shown to clients</label><input id="s-phone" value="${esc(s.phone)}"></div>
+      <div class="field"><label for="s-color">Brand color</label><input id="s-color" type="color" value="${esc(s.brandColor)}" style="height:44px;padding:4px"></div>
+      <div class="field"><label for="s-tz">Time zone</label><input id="s-tz" value="${esc(s.timezone)}"><span class="hint">Dominican Republic: <code>America/Santo_Domingo</code> · Haiti: <code>America/Port-au-Prince</code></span></div>
+      <div class="field" style="grid-column:1/-1"><label for="s-policy">Instructions shown after booking (Spanish)</label><textarea id="s-policy">${esc(s.policy)}</textarea></div>
+    </div></div>
+
+  <div class="section" id="wa"><h2>WhatsApp alerts</h2><p class="hint">Get a WhatsApp message on your phone for every new booking and cancellation. Free, set up once.</p>
+    <ol class="steps">
+      <li>On your phone, save the contact <code>+34 611 021 695</code> (name it "CallMeBot").</li>
+      <li>Send it this WhatsApp message: <code>I allow callmebot to send me messages</code></li>
+      <li>Within about 2 minutes it replies with your <b>API key</b> (a number). Paste it below.</li>
+      <li>Enter your own WhatsApp number with country code, press <b>Save changes</b>, then <b>Send test message</b>.</li>
+    </ol>
+    <div class="grid2">
+      <div class="field"><label for="s-wa">Your WhatsApp number</label><input id="s-wa" placeholder="+18095550100" value="${esc(s.whatsappNumber)}"></div>
+      <div class="field"><label for="s-key">CallMeBot API key</label><input id="s-key" value="${esc(s.callmebotKey)}" autocomplete="off"></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button type="button" class="btn" id="testWa">Send test message</button><span class="hint" id="waStatus">${s.whatsappNumber&&s.callmebotKey?"Set up. Send a test to be sure.":"Not set up yet. Until then, clients get a button to send you their booking on WhatsApp themselves."}</span></div>
+  </div>
+
+  <div class="section"><h2>Appointment hours</h2><p class="hint">Every appointment is 1 hour. Clients are offered one time per hour, from the first to the last appointment. Hours already booked disappear automatically.</p>
+    <div class="hours">${[1,2,3,4,5,6,0].map(d=>{const h=s.hours[d];return `<div class="hrow"><b>${DAYS[d]}</b><label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" data-open="${d}" ${h?"checked":""}> Open</label>
+      <div class="times">First <select data-from="${d}" ${h?"":"disabled"}>${hourOpts("05:00","22:00",h?h[0]:"08:00")}</select> Last <select data-to="${d}" ${h?"":"disabled"}>${hourOpts("05:00","22:00",h?minusHour(h[1]):"15:00")}</select></div></div>`;}).join("")}</div>
+    <div class="grid2" style="margin-top:16px">
+      <div class="field"><label for="s-bs">Lunch hour (not offered)</label><select id="s-bs"><option value="">No lunch hour</option>${hourOpts("10:00","16:00",s.breakStart||"x")}</select></div>
+      <div class="field"><label for="s-lead">Minimum notice</label><select id="s-lead">${[[0,"None"],[60,"1 hour"],[120,"2 hours"],[240,"4 hours"],[720,"12 hours"],[1440,"1 day"]].map(([v,l])=>`<option value="${v}" ${+s.leadMinutes===v?"selected":""}>${l}</option>`).join("")}</select></div>
+      <div class="field"><label for="s-hor">Clients can book up to</label><select id="s-hor">${[7,14,30,60,90].map(v=>`<option value="${v}" ${+s.horizonDays===v?"selected":""}>${v} days ahead</option>`).join("")}</select></div>
+    </div>
+    <div class="field" style="margin-top:16px"><label for="s-closed">Days off (holidays, vacation)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="date" id="s-closed" style="max-width:200px"><button type="button" class="btn" id="addClosed">Add day off</button></div>
+      <div class="chips" id="closedList"></div></div>
+  </div>
+
+  <div class="section"><h2>Services</h2><p class="hint">What clients can book. Each one takes a 1-hour appointment.</p>
+    <div id="svcList"></div><button type="button" class="btn" id="addSvc">+ Add service</button></div>
+
+  <div class="savebar"><span class="hint" id="saveMsg" style="margin-right:auto;align-self:center"></span><button class="btn primary" id="saveBtn">Save changes</button></div>
+  </form>`;
+  closed=[...(s.closedDates||[])]; services=s.services.map(x=>({...x})); drawClosed(); drawSvcs();
+}
+let closed=[], services=[];
+function drawClosed(){ $("#closedList").innerHTML = closed.length? closed.sort().map(d=>`<span class="chip">${esc(fmtDay(d))}<button type="button" data-rmclosed="${d}" aria-label="Remove">×</button></span>`).join("") : `<span class="hint">No days off added.</span>`; }
+function setupNeeded(){
+  const missing=[]; if(!SET.businessName) missing.push("your business name"); if(!SET.services.length) missing.push("at least one service");
+  return missing.length? `<div class="section" style="border-color:var(--warn);background:var(--warn-soft)"><b>Finish setting up your booking page.</b> Clients can't book until you add ${missing.join(" and ")}. <button class="btn sm" data-tab="settings" style="margin-left:6px">Open Settings</button></div>` : "";
+}
+function drawSvcs(){
+  $("#svcList").innerHTML=services.map((x,i)=>`<div class="svcrow">
+    <div class="field"><label for="sv-n-${i}">Service name</label><input id="sv-n-${i}" data-sv="${i}" data-k="name" value="${esc(x.name)}"></div>
+    <div class="field"><label for="sv-p-${i}">Price (optional)</label><input id="sv-p-${i}" data-sv="${i}" data-k="price" value="${esc(x.price)}"></div>
+    <button type="button" class="btn sm danger" data-rmsvc="${i}">Remove</button></div>`).join("") || `<p class="hint" style="margin:0 0 12px">No services yet. Add at least one so clients can book.</p>`;
+}
+function collect(){
+  const hours={}; for(let d=0;d<7;d++){ hours[d]= document.querySelector(`[data-open="${d}"]`).checked ? [document.querySelector(`[data-from="${d}"]`).value, plusHour(document.querySelector(`[data-to="${d}"]`).value)] : null; }
+  return { businessName:$("#s-name").value, providerName:$("#s-prov").value, tagline:$("#s-tag").value, address:$("#s-addr").value, phone:$("#s-phone").value,
+    brandColor:$("#s-color").value, timezone:$("#s-tz").value.trim(), policy:$("#s-policy").value, whatsappNumber:$("#s-wa").value.trim(), callmebotKey:$("#s-key").value.trim(),
+    hours, breakStart:$("#s-bs").value, breakEnd:$("#s-bs").value?plusHour($("#s-bs").value):"", leadMinutes:+$("#s-lead").value, horizonDays:+$("#s-hor").value,
+    closedDates:closed, services };
+}
+async function saveSettings(){
+  for(let d=0;d<7;d++){ if(document.querySelector(`[data-open="${d}"]`).checked && document.querySelector(`[data-from="${d}"]`).value>document.querySelector(`[data-to="${d}"]`).value){ $("#saveMsg").textContent=`${DAYS[d]}: the last appointment can't be before the first one.`; return false; } }
+  $("#saveBtn").disabled=true;
+  try{ SET=await api("/api/admin/settings",{method:"PUT",body:JSON.stringify(collect())}); $("#bn").textContent=SET.businessName||"Your business"; $("#saveMsg").textContent=""; toast("Saved"); return true; }
+  catch(e){ $("#saveMsg").textContent=e.message; return false; }
+  finally{ $("#saveBtn").disabled=false; }
+}
+
+/* ---------- Share ---------- */
+function renderShare(){
+  const url=PREVIEW? new URL("index.html",location.href).href : location.origin+"/";
+  const msg=`Hola 👋 Ya puede reservar su cita en ${SET.businessName} directamente desde su celular, las 24 horas: ${url}`;
+  $("#main").innerHTML=`<div class="section"><h2>Your booking link</h2><p class="hint">Send this to your clients, put it in your WhatsApp Business profile, Instagram bio or Google listing.</p>
+    <div class="share-link"><input id="link" readonly value="${esc(url)}"><button class="btn primary" data-copy="link">Copy link</button><a class="btn" href="${esc(url)}" target="_blank" rel="noopener">Open</a></div>
+    <div id="qr" aria-label="QR code for the booking link"></div><p class="hint">Print this QR code for your reception desk. Right-click or long-press it to save the image.</p></div>
+  <div class="section"><h2>Message for your clients</h2><p class="hint">Copy and paste into WhatsApp.</p>
+    <div class="field"><textarea id="msg" style="min-height:90px">${esc(msg)}</textarea></div><div style="margin-top:10px"><button class="btn" data-copy="msg">Copy message</button></div></div>`;
+  if(window.QRCode){ new QRCode($("#qr"),{text:url,width:200,height:200,colorDark:"#0E2A33",colorLight:"#ffffff"}); } else $("#qr").hidden=true;
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.tab){ tab=b.dataset.tab; if(tab==="appts") await loadAppts().catch(()=>{}); renderTab(); return; }
+  if(b.id==="logout"){ await api("/api/admin/logout",{method:"POST"}); showLogin(); return; }
+  if(b.dataset.filter){ filter=b.dataset.filter; renderAppts(); return; }
+  if(b.id==="addBtn"){ addDialog(); return; }
+  if(b.dataset.st){ try{ await api("/api/admin/appointments/"+b.dataset.ref,{method:"PATCH",body:JSON.stringify({status:b.dataset.st})}); await loadAppts(); renderAppts(); toast("Marked "+STATUS[b.dataset.st].toLowerCase()); }catch(err){toast(err.message);} return; }
+  if(b.dataset.askdel){ confirmDel=b.dataset.askdel; renderAppts(); return; }
+  if(b.dataset.keep){ confirmDel=null; renderAppts(); return; }
+  if(b.dataset.del){ try{ await api("/api/admin/appointments/"+b.dataset.del,{method:"DELETE"}); confirmDel=null; await loadAppts(); renderAppts(); toast("Deleted"); }catch(err){toast(err.message);} return; }
+  if(b.id==="addClosed"){ const v=$("#s-closed").value; if(v && !closed.includes(v)){ closed.push(v); drawClosed(); } return; }
+  if(b.dataset.rmclosed){ closed=closed.filter(d=>d!==b.dataset.rmclosed); drawClosed(); return; }
+  if(b.id==="addSvc"){ services.push({id:"",name:"",minutes:60,price:""}); drawSvcs(); $(`#sv-n-${services.length-1}`).focus(); return; }
+  if(b.dataset.rmsvc){ services.splice(+b.dataset.rmsvc,1); drawSvcs(); return; }
+  if(b.id==="saveBtn"){ e.preventDefault(); saveSettings(); return; }
+  if(b.id==="testWa"){ const st=$("#waStatus"); if(!(await saveSettings())) return; st.textContent="Sending…"; try{ await api("/api/admin/test-whatsapp",{method:"POST"}); st.textContent="Test sent. Check your WhatsApp."; st.style.color="var(--ok)"; }catch(err){ st.textContent=err.message; st.style.color="var(--bad)"; } return; }
+  if(b.dataset.copy){ const el=$("#"+b.dataset.copy); try{ await navigator.clipboard.writeText(el.value); toast("Copied"); }catch(_){ el.select(); toast("Selected. Press Ctrl+C to copy."); } return; }
+});
+document.addEventListener("input",e=>{
+  if(e.target.id==="q"){ q=e.target.value; const p=e.target.selectionStart; renderAppts(); const el=$("#q"); el.focus(); try{el.setSelectionRange(p,p);}catch(_){} }
+  if(e.target.dataset.sv!==undefined){ const i=+e.target.dataset.sv, k=e.target.dataset.k; services[i][k]= k==="minutes"? +e.target.value : e.target.value; }
+});
+document.addEventListener("change",e=>{
+  if(e.target.dataset.open!==undefined){ const d=e.target.dataset.open; document.querySelector(`[data-from="${d}"]`).disabled=!e.target.checked; document.querySelector(`[data-to="${d}"]`).disabled=!e.target.checked; }
+});
+document.addEventListener("submit",e=>{ if(e.target.id==="setForm"){ e.preventDefault(); saveSettings(); } });
+boot().catch(()=>showLogin());
+</script>
+</body>
+</html>
