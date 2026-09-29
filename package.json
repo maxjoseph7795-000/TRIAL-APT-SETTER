@@ -1,0 +1,15 @@
+{
+  "name": "appointment-booking-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-service appointment booking with WhatsApp alerts. The app lives in the appointment-app folder.",
+  "scripts": {
+    "start": "node appointment-app/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
